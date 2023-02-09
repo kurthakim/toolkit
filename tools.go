@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -39,6 +40,21 @@ type UploadedFile struct {
 	FileSize         int64
 }
 
+func (t *Tools) UploadOneFile(r *http.Request, uploadDir string, rename ...bool) (*UploadedFile, error) {
+renameFile := true
+if len(rename) > 0 {
+	renameFile = rename[0]
+}
+
+	files, err := t.UploadFiles(r, uploadDir, renameFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return files[0], nil
+}
+
+
 func (t *Tools) UploadFiles(r *http.Request, uploadDir string, rename ...bool) ([]*UploadedFile, error) {
 	renameFile := true
 	if len(rename) > 0 {
@@ -59,6 +75,7 @@ func (t *Tools) UploadFiles(r *http.Request, uploadDir string, rename ...bool) (
 	for _, fHeaders := range r.MultipartForm.File {
 		for _, hdr := range fHeaders {
 			uploadedFiles, err = func(uploadedFiles []*UploadedFile) ([]*UploadedFile, error) {
+				var uploadedFile UploadedFile
 				infile, err := hdr.Open()
 				if err != nil {
 					return nil, err
@@ -74,10 +91,9 @@ func (t *Tools) UploadFiles(r *http.Request, uploadDir string, rename ...bool) (
 				// check to see if the file type is permitted
 				allowed := false
 				fileType := http.DetectContentType(buff)
-				allowedTypes := []string{"image/jpeg", "image/png", "image/gif"}
 
 				if len(t.AllowedFileTypes) > 0 {
-					for _, x := range AllowedFileTypes {
+					for _, x := range t.AllowedFileTypes {
 						if strings.EqualFold(fileType, x) {
 							allowed = true
 						}
@@ -93,11 +109,14 @@ func (t *Tools) UploadFiles(r *http.Request, uploadDir string, rename ...bool) (
 				if err != nil {
 					return nil, err
 				}
+
 				if renameFile {
 					uploadedFile.NewFileName = fmt.Sprintf("%s%s", t.RandomString(25), filepath.Ext(hdr.Filename))
 				} else {
 					uploadedFile.NewFileName = hdr.Filename
 				}
+
+				uploadedFile.OriginalFileName = hdr.Filename
 
 				var outfile *os.File
 				defer outfile.Close()
