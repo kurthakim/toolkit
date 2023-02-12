@@ -46,6 +46,8 @@ type UploadedFile struct {
 	FileSize         int64
 }
 
+	// UploadOneFile is just a convenience method that calls UploadFiles, but expects only one file to	
+// be in the upload.
 func (t *Tools) UploadOneFile(r *http.Request, uploadDir string, rename ...bool) (*UploadedFile, error) {
 renameFile := true
 if len(rename) > 0 {
@@ -60,7 +62,10 @@ if len(rename) > 0 {
 	return files[0], nil
 }
 
-
+	// UploadFiles uploads one or more file to a specified directory, and gives the files a random name.	
+// It returns a slice containing the newly named files, the original file names, the size of the files,	
+// and potentially an error. If the optional last parameter is set to true, then we will not rename	
+// the files, but will use the original file names.
 func (t *Tools) UploadFiles(r *http.Request, uploadDir string, rename ...bool) ([]*UploadedFile, error) {
 	renameFile := true
 	if len(rename) > 0 {
@@ -199,11 +204,11 @@ func (t *Tools) DownloadStaticFile(w http.ResponseWriter, r *http.Request, p, fi
 type JSONResponse struct {
 	Error bool `json:"error"`
 	Message string `json:"message"`
-	Data any `json:"data,omitempty"`
+	Data interface{} `json:"data,omitempty"`
 }
 
 // ReadJSON tries to read the body of a request and converts from json into a go data variable
-func (t *Tools) ReadJSON(w http.ResponseWriter, r *http.Request, data any) error {
+func (t *Tools) ReadJSON(w http.ResponseWriter, r *http.Request, data interface{}) error {
 	maxBytes := 1024 * 1024 // one meg
 	if t.MaxJSONSize != 0 {
 		maxBytes = t.MaxJSONSize
@@ -268,7 +273,7 @@ func (t *Tools) ReadJSON(w http.ResponseWriter, r *http.Request, data any) error
 }
 
 // WriteJSON takes a response status code and arbitrary data and  writes json to the client
-func (t *Tools) WriteJSON(w http.ResponseWriter, status int, data any, headers ...http.Header) error {
+func (t *Tools) WriteJSON(w http.ResponseWriter, status int, data interface{}, headers ...http.Header) error {
 	out, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -310,7 +315,7 @@ func (t *Tools) ErrorJSON(w http.ResponseWriter, err error, status ...int) error
 
 // PushJSONToRemote posts arbitrary data to some URL as JSON, and returns the response, status code, and error, if any.
 // The final parameter, client, is optional, If none is specified, we use the standard http.Client
-func (t *Tools) PushJSONToRemote(uri string, data any, client ...*http.Client) (*http.Response, int, error) {
+func (t *Tools) PushJSONToRemote(uri string, data interface{}, client ...*http.Client) (*http.Response, int, error) {
 	//create json
 	jsonData, err := json.Marshal(data)
 	if err != nil {
